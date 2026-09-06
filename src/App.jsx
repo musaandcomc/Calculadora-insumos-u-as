@@ -44,32 +44,91 @@ function emptyGasto() {
   return { id: crypto.randomUUID(), nombre: "", monto: "" };
 }
 
-export default function CalculadoraEsteticas() {
-  // Configuración general
-  const [configAbierta, setConfigAbierta] = useState(true);
-  const [tarifaHora, setTarifaHora] = useState(6000);
-  const [serviciosPorMes, setServiciosPorMes] = useState(80);
-  const [gastosFijos, setGastosFijos] = useState([
-    { id: crypto.randomUUID(), nombre: "Alquiler", monto: "" },
-    { id: crypto.randomUUID(), nombre: "Luz", monto: "" },
-    { id: crypto.randomUUID(), nombre: "Gas", monto: "" },
-  ]);
+// --- Persistencia en localStorage ---
+const STORAGE_KEYS = {
+  tarifaHora: "musse_tarifaHora",
+  serviciosPorMes: "musse_serviciosPorMes",
+  gastosFijos: "musse_gastosFijos",
+  insumosGuardados: "musse_insumosGuardados",
+  servicios: "musse_servicios",
+};
 
-  // Librería de insumos guardados
+function loadFromStorage(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw !== null ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Si el navegador bloquea localStorage (modo privado, etc.), no rompemos la app
+  }
+}
+
+export default function CalculadoraEsteticas() {
+  // Configuración general (persistente)
+  const [configAbierta, setConfigAbierta] = useState(true);
+  const [tarifaHora, setTarifaHora] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.tarifaHora, 6000)
+  );
+  const [serviciosPorMes, setServiciosPorMes] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.serviciosPorMes, 80)
+  );
+  const [gastosFijos, setGastosFijos] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.gastosFijos, [
+      { id: crypto.randomUUID(), nombre: "Alquiler", monto: "" },
+      { id: crypto.randomUUID(), nombre: "Luz", monto: "" },
+      { id: crypto.randomUUID(), nombre: "Gas", monto: "" },
+    ])
+  );
+
+  // Librería de insumos guardados (persistente)
   const [libreriaAbierta, setLibreriaAbierta] = useState(false);
-  const [insumosGuardados, setInsumosGuardados] = useState([]);
+  const [insumosGuardados, setInsumosGuardados] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.insumosGuardados, [])
+  );
   const [seleccionLibreria, setSeleccionLibreria] = useState("");
 
-  // Servicio en construcción
+  // Servicio en construcción (NO persistente: es un formulario en curso)
   const [editandoId, setEditandoId] = useState(null);
   const [nombreServicio, setNombreServicio] = useState("");
   const [tiempoMin, setTiempoMin] = useState(45);
   const [insumos, setInsumos] = useState([emptyInsumo()]);
   const [margenPct, setMargenPct] = useState(30);
-  const [servicios, setServicios] = useState([]);
+
+  // Lista de servicios ya guardados/cotizados (persistente)
+  const [servicios, setServicios] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.servicios, [])
+  );
 
   const nombreServicioRef = useRef(null);
   const [pdfListo, setPdfListo] = useState(false);
+
+  // Guardar automáticamente en localStorage cada vez que cambian estos datos
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.tarifaHora, tarifaHora);
+  }, [tarifaHora]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.serviciosPorMes, serviciosPorMes);
+  }, [serviciosPorMes]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.gastosFijos, gastosFijos);
+  }, [gastosFijos]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.insumosGuardados, insumosGuardados);
+  }, [insumosGuardados]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.servicios, servicios);
+  }, [servicios]);
 
   useEffect(() => {
     if (window.jspdf) {
