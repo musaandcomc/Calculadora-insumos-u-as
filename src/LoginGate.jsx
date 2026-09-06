@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 
-// Pegá acá el HASH de tu contraseña (no la contraseña en sí).
-// Ver instrucciones para generarlo.
+
 const PASSWORD_HASH = "1506fcc131c6180dfbcac68ada6c10e159924815455714860ce569b5e7d58b11";
 
 async function hashText(text) {
