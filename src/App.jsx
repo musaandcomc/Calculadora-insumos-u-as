@@ -20,6 +20,10 @@ const COLORS = {
   garnet: "#690500",
 };
 
+// Borde un poco más marcado que el gris clarito original, para mejor contraste
+// en los recuadros de números chicos (montos, rendimiento, etc.)
+const AMOUNT_BORDER = "#B9A67E";
+
 const money = (n) =>
   (isNaN(n) ? 0 : n).toLocaleString("es-AR", {
     style: "currency",
@@ -28,6 +32,11 @@ const money = (n) =>
   });
 
 const num = (v) => parseFloat(v) || 0;
+
+const capitalizar = (texto) => {
+  if (!texto) return texto;
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
 
 const costoPorServicioInsumo = (i) => {
   const costoTotal = num(i.costoTotal);
@@ -70,9 +79,34 @@ function saveToStorage(key, value) {
   }
 }
 
+function hasSavedData(key) {
+  try {
+    return localStorage.getItem(key) !== null;
+  } catch {
+    return false;
+  }
+}
+
 export default function CalculadoraEsteticas() {
-  // Configuración general (persistente)
-  const [configAbierta, setConfigAbierta] = useState(true);
+  // Librería de insumos guardados (persistente) — se declara primero porque
+  // "libreriaAbierta" decide su valor inicial en base a si ya hay insumos cargados
+  const [insumosGuardados, setInsumosGuardados] = useState(() =>
+    loadFromStorage(STORAGE_KEYS.insumosGuardados, [])
+  );
+
+  // Se abre sola la primera vez (cuando todavía no hay insumos cargados),
+  // para que la usuaria note que existe. Una vez que ya cargó algo, arranca cerrada.
+  const [libreriaAbierta, setLibreriaAbierta] = useState(
+    () => loadFromStorage(STORAGE_KEYS.insumosGuardados, []).length === 0
+  );
+  const [seleccionLibreria, setSeleccionLibreria] = useState("");
+
+  // Configuración general (persistente).
+  // "configAbierta" arranca abierto solo la primera vez (cuando todavía no hay
+  // nada guardado); si ya hay datos, arranca cerrado para no repetir el scroll.
+  const [configAbierta, setConfigAbierta] = useState(
+    () => !hasSavedData(STORAGE_KEYS.tarifaHora)
+  );
   const [tarifaHora, setTarifaHora] = useState(() =>
     loadFromStorage(STORAGE_KEYS.tarifaHora, 6000)
   );
@@ -86,13 +120,6 @@ export default function CalculadoraEsteticas() {
       { id: crypto.randomUUID(), nombre: "Gas", monto: "" },
     ])
   );
-
-  // Librería de insumos guardados (persistente)
-  const [libreriaAbierta, setLibreriaAbierta] = useState(false);
-  const [insumosGuardados, setInsumosGuardados] = useState(() =>
-    loadFromStorage(STORAGE_KEYS.insumosGuardados, [])
-  );
-  const [seleccionLibreria, setSeleccionLibreria] = useState("");
 
   // Servicio en construcción (NO persistente: es un formulario en curso)
   const [editandoId, setEditandoId] = useState(null);
@@ -250,7 +277,7 @@ export default function CalculadoraEsteticas() {
   const guardarServicio = () => {
     if (!nombreServicio.trim()) return;
     const datos = {
-      nombre: nombreServicio.trim(),
+      nombre: capitalizar(nombreServicio.trim()),
       tiempoMin: num(tiempoMin),
       insumos: insumos.map((i) => ({ ...i })),
       margenPct: num(margenPct),
@@ -286,7 +313,7 @@ export default function CalculadoraEsteticas() {
   };
 
   const inputBase = { borderColor: COLORS.coffee, color: COLORS.coffee };
-  const softBorder = { borderColor: "#D8CFC0", color: COLORS.coffee };
+  const softBorder = { borderColor: AMOUNT_BORDER, color: COLORS.coffee };
 
   return (
     <div
@@ -392,7 +419,7 @@ export default function CalculadoraEsteticas() {
                         className="flex-1 border rounded px-2 py-1.5 outline-none text-sm"
                         style={softBorder}
                       />
-                      <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: "#D8CFC0" }}>
+                      <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: AMOUNT_BORDER }}>
                         <span className="text-xs mr-1" style={{ color: COLORS.coffee, opacity: 0.5 }}>
                           $
                         </span>
@@ -465,7 +492,7 @@ export default function CalculadoraEsteticas() {
 
               <div className="space-y-3">
                 {insumosGuardados.map((i) => (
-                  <div key={i.id} className="border rounded p-2.5" style={{ borderColor: "#D8CFC0" }}>
+                  <div key={i.id} className="border rounded p-2.5" style={{ borderColor: AMOUNT_BORDER }}>
                     <div className="flex items-center gap-2 mb-2">
                       <input
                         type="text"
@@ -489,7 +516,7 @@ export default function CalculadoraEsteticas() {
                       </button>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: "#D8CFC0" }}>
+                      <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: AMOUNT_BORDER }}>
                         <span className="text-xs mr-1" style={{ color: COLORS.coffee, opacity: 0.5 }}>
                           Cuesta $
                         </span>
@@ -503,7 +530,7 @@ export default function CalculadoraEsteticas() {
                         />
                       </div>
                       {i.tipo === "reutilizable" && (
-                        <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: "#D8CFC0" }}>
+                        <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: AMOUNT_BORDER }}>
                           <span className="text-xs mr-1" style={{ color: COLORS.coffee, opacity: 0.5 }}>
                             Rinde para
                           </span>
@@ -615,7 +642,7 @@ export default function CalculadoraEsteticas() {
                 {insumos.map((insumo) => {
                   const costoPorServicio = costoPorServicioInsumo(insumo);
                   return (
-                    <div key={insumo.id} className="border rounded p-2.5" style={{ borderColor: "#D8CFC0" }}>
+                    <div key={insumo.id} className="border rounded p-2.5" style={{ borderColor: AMOUNT_BORDER }}>
                       <div className="flex items-center gap-2 mb-2">
                         <input
                           type="text"
@@ -644,7 +671,7 @@ export default function CalculadoraEsteticas() {
                         </button>
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: "#D8CFC0" }}>
+                        <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: AMOUNT_BORDER }}>
                           <span className="text-xs mr-1" style={{ color: COLORS.coffee, opacity: 0.5 }}>
                             Cuesta $
                           </span>
@@ -658,7 +685,7 @@ export default function CalculadoraEsteticas() {
                           />
                         </div>
                         {insumo.tipo === "reutilizable" ? (
-                          <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: "#D8CFC0" }}>
+                          <div className="flex items-center border rounded px-2 py-1.5" style={{ borderColor: AMOUNT_BORDER }}>
                             <span className="text-xs mr-1" style={{ color: COLORS.coffee, opacity: 0.5 }}>
                               Rinde para
                             </span>
@@ -702,7 +729,7 @@ export default function CalculadoraEsteticas() {
           {/* Ticket de resultado */}
           <div className="md:col-span-2">
             <div
-              className="border-2 rounded-lg p-5 sticky top-4"
+              className="border-2 rounded-lg p-5 md:sticky md:top-4"
               style={{ borderColor: COLORS.coffee, backgroundColor: "white", borderStyle: "dashed" }}
             >
               <p
@@ -802,6 +829,14 @@ export default function CalculadoraEsteticas() {
               >
                 {editandoId ? "Guardar cambios" : "Guardar servicio"}
               </button>
+              {!nombreServicio.trim() && (
+                <p
+                  className="text-xs text-center mt-2"
+                  style={{ color: COLORS.coffee, opacity: 0.55 }}
+                >
+                  Completá el nombre del servicio (Paso 2) para poder guardar
+                </p>
+              )}
             </div>
           </div>
         </div>
