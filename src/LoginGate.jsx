@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 
-const PASSWORD_HASH = "1506fcc131c6180dfbcac68ada6c10e159924815455714860ce569b5e7d58b11";
+const PASSWORD_HASH = "15e2b0d3c33891ebb0f1ef609ec419420c20e320ce94c65fbc8c3312448eb225";
 
 async function hashText(text) {
   const encoder = new TextEncoder();
